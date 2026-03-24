@@ -2,6 +2,7 @@ import "./styles/global.css";
 import useAuthController from "./controllers/useAuthController";
 import EmployeeApp from "./views/layouts/EmployeeApp";
 import VendorApp from "./views/layouts/VendorApp";
+import VendorDashboardFull from "./views/modules/Vendor/VendorDashboardFull";
 import { ROLES } from "./models/userRoles";
 
 export default function App() {
@@ -9,7 +10,11 @@ export default function App() {
 
   return (
     <>
-      {/* Dev-mode role switcher */}
+      {window.location.pathname === '/dashboard-full' ? (
+        <VendorDashboardFull />
+      ) : (
+        <>
+          {/* Dev-mode role switcher */}
       {isDevMode && (
         <div style={{
           position: "fixed", top: 12, left: "50%", transform: "translateX(-50%)",
@@ -55,6 +60,8 @@ export default function App() {
         ? <VendorApp user={user} />
         : <EmployeeApp user={user} />
       }
+        </>
+      )}
     </>
   );
 }

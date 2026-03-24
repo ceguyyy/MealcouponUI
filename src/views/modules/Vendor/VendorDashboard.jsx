@@ -10,17 +10,60 @@ export default function VendorDashboard({ logs = [] }) {
 
     // Stats calculation based on selectedDate
     const stats = useMemo(() => {
-        const dailyLogs = logs.filter(log => log.date === selectedDate);
-        const redeemed = dailyLogs.filter(log => log.status === "redeemed").length;
+        // Fix: Use dateKey instead of date to match the logs model
+        const dailyLogs = logs.filter(log => log.dateKey === selectedDate);
+        const redeemedLogs = dailyLogs.filter(log => log.status === "redeemed");
+        const redeemed = redeemedLogs.length;
+        
         // Mocking 'total' as slightly higher than redeemed for visual impact, 
         // or we can use a constant/target for the day.
         const totalVouchers = dailyLogs.length > 0 ? Math.max(dailyLogs.length, redeemed + 5) : 50;
+
+        // Peak Time Calculation
+        const hourCounts = {};
+        redeemedLogs.forEach(log => {
+            let hourStr = "00:00";
+            if (log.time.includes("AM") || log.time.includes("PM")) {
+                const match = log.time.match(/(\d+):\d+\s+(AM|PM)/i);
+                if (match) {
+                    let h = parseInt(match[1]);
+                    const ampm = match[2].toUpperCase();
+                    if (ampm === "PM" && h !== 12) h += 12;
+                    if (ampm === "AM" && h === 12) h = 0;
+                    hourStr = `${h.toString().padStart(2, "0")}:00`;
+                }
+            } else {
+                const match = log.time.match(/(\d+):(\d+)/);
+                if (match) {
+                    hourStr = `${match[1].padStart(2, "0")}:00`;
+                }
+            }
+            hourCounts[hourStr] = (hourCounts[hourStr] || 0) + 1;
+        });
+
+        let maxHour = "--:--";
+        let maxCount = 0;
+        for (const [hr, count] of Object.entries(hourCounts)) {
+            if (count > maxCount) {
+                maxCount = count;
+                maxHour = hr;
+            }
+        }
+
+        let peakTimeDisplay = "--:--";
+        if (maxHour !== "--:--") {
+            const h = parseInt(maxHour.split(":")[0]);
+            const ampm = h >= 12 ? "PM" : "AM";
+            const h12 = h % 12 || 12;
+            peakTimeDisplay = `${h12}:00 ${ampm}`;
+        }
 
         return {
             total: totalVouchers,
             redeemed: redeemed,
             pending: Math.max(0, totalVouchers - redeemed),
-            rate: totalVouchers > 0 ? Math.round((redeemed / totalVouchers) * 100) : 0
+            rate: totalVouchers > 0 ? Math.round((redeemed / totalVouchers) * 100) : 0,
+            peakTime: peakTimeDisplay
         };
     }, [logs, selectedDate]);
 
@@ -84,7 +127,7 @@ export default function VendorDashboard({ logs = [] }) {
                     <div style={{ borderLeft: "1px solid var(--b0)" }} />
                     <div style={{ flex: 1, paddingLeft: 16 }}>
                         <div style={{ fontSize: 10, fontWeight: 800, color: "var(--t3)", textTransform: "uppercase" }}>Peak Time</div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--t2)", marginTop: 2 }}>12:15 PM</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--t2)", marginTop: 2 }}>{stats.peakTime}</div>
                     </div>
                 </div>
             </div>
